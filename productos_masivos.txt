@@ -1,0 +1,214 @@
+# Introduccion
+Este conjunto de datos contiene el registro de ventas de productos masivos de dos importantes marcas de supermercados en Colombia, incluyendo nombres de productos, subcategoría, precios, entre otros.
+ Este cuaderno se utilizará para limpiar y explorar los datos para resolver preguntas relacionadas con el comportamiento de ventas de ingresos de las diferentes marcas, subcategorías y productos.
+
+### Preguntas u Objetivos a resolver
+* Q1: Ventas e ingresos por subcategorias
+* Q2: Ventas e ingresos por productos
+* Q3: Ventas e ingresos por mes en 2019
+* Q4: Las mejores marcas con los mayores ingresos y ventas
+
+#Install openpyxl to read xlsx file
+!pip install openpyxl
+
+### Importando librerias
+
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+data = pd.read_excel("output - Kaggle.xlsx")
+data.head(2)
+
+# Transformando dataframe
+
+Columns_To_Drop = ["prod_icon", "source_type", "prod_id", "prod_name_long","tags"]
+
+#Delete unnecesary columns
+data_to_explore = data.drop(Columns_To_Drop, axis=1)
+data_to_explore.head(2)
+
+data_to_explore.info(verbose = True)
+
+#Create heatmap with Seaborn to view nulls.
+plt.figure(figsize=(10,6))
+sns.heatmap(data_to_explore.isna().transpose(),
+           cmap = "mako",   #estilo
+           cbar_kws = {"label":"missing data"} )  #dar nombre a la barra lateral
+plt.savefig("productos-consumo-masivo_null-heatmap.png", dpi=100)
+
+#Drop Nulls
+data_to_explore.dropna(subset=["prod_name", "prod_units", "prod_brand", 
+                               "subcategory", "prod_unit_price"], inplace=True)
+
+#Verify drop nulls
+plt.figure(figsize=(10,6))
+sns.heatmap(data_to_explore.isna().transpose(),
+           cmap = "mako",
+           cbar_kws = {"label":"missing data"} )
+plt.savefig("productos-consumo-masivo_null-heatmap2.png", dpi=100)
+
+#change type columns 
+data_to_explore["date"] =  data_to_explore["date"].astype(str) # cambia a tipo de dato "String o tambienn llamado object"
+data_to_explore["prod_unit_price"] = pd.to_numeric(data_to_explore["prod_unit_price"], #nos transofrma a tipo numerico, identificando si hay punto decimal o no
+                                                   errors = "coerce")
+data_to_explore.info()
+
+
+data_to_explore["year"] = data_to_explore["date"].str[:4]  #año 1-4
+data_to_explore["month"] = data_to_explore["date"].str[4:6] #mes 5-6
+data_to_explore["day"] = data_to_explore["date"].str[6:] # dia 7-8
+data_to_explore.head(2)
+
+
+#Diccionario de creación con meses.
+months = { "01":"January", "02":"February", "03":"March", "04":"April", 
+          "05":"May", "06":"June", "07":"July", "08":"August", "09":"September",
+          "10":"October", "11":"November", "12":"December"}
+
+#Extrayendo nombre de los meses con los numeros
+data_to_explore["MonthName"] = data_to_explore["month"].map(months) #identifica conforme a monh el nombre del mes de la nueva coumna
+data_to_explore.head(3)
+
+
+
+#Escogiendo el tipo de columna
+data_to_explore["year"] = pd.to_numeric(data_to_explore["year"])
+data_to_explore["month"] = pd.to_numeric(data_to_explore["month"])  
+data_to_explore["day"] = pd.to_numeric(data_to_explore["day"])
+
+#Transforma a númerico para graficar
+
+
+
+data_to_explore.info()
+
+## Resolviendo las preguntas
+
+# Q1 : Ventas e ingresos por subcategorias
+
+
+#Contar Ventas
+dataq1_count = data_to_explore.groupby(["subcategory"], as_index=False).count().sort_values("category", ascending=0)[:10]
+
+#agrupa, cuenta el objeto de la lista dado por subcategoria,y ordena los datos ascendentemente de 1-10
+
+#Sumar precios de productos
+dataq1_sum = data_to_explore.groupby(["subcategory"], as_index=False).sum().sort_values("prod_unit_price", ascending=0)[:10]
+#agrupa, suma los objetos de la lista dado por subcategoria,y ordena los datos ascendentemente de 1-10
+
+
+#Paleta de colores
+colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+          '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf', "#FF5733", 
+          "#9FDD22", "#F7DC6F"]
+
+
+plt.style.use('dark_background')  #fondo de la grafica
+fig, axes = plt.subplots(1, 2, figsize=(20,5)) #filas y columnas para colocar graficas
+#Sales by subcategory
+axes[0].barh(dataq1_count["subcategory"], dataq1_count["category"], color=colors) #barh nos identifica que sera grafico de barras
+axes[0].set_title("Top Sales by subcategory")
+axes[0].set_xlabel("Sales")
+axes[0].set_ylabel("Subcategory")
+
+#Ingresos por subcategoria
+axes[1].barh(dataq1_sum["subcategory"], dataq1_sum["prod_unit_price"], color=colors)
+axes[1].set_title("Top Incomes by subcategory")
+axes[1].set_xlabel("Incomes")
+axes[1].set_ylabel("Subcategory")
+
+fig.tight_layout()
+
+# Q2 : Ventas e ingresos por productos
+
+#Count Sales
+dataq2_count = data_to_explore.groupby(["prod_name"], as_index=False).count().sort_values("category", ascending=0)[:10]
+
+#Sumar precios de productos
+dataq2_sum = data_to_explore.groupby(["prod_name"], as_index=False).sum().sort_values("prod_unit_price", ascending=0)[:10]
+
+plt.style.use('dark_background')
+fig, axes = plt.subplots(1, 2, figsize=(20,5))
+#Ventas por producto
+axes[0].barh(dataq2_count["prod_name"], dataq1_count["category"], color=colors)
+axes[0].set_title("Top Sales by Product")
+axes[0].set_xlabel("Sales")
+axes[0].set_ylabel("Product Name")
+
+#Ingresos por producto
+axes[1].barh(dataq2_sum["prod_name"], dataq1_sum["prod_unit_price"], color=colors)
+axes[1].set_title("Top Incomes by Product")
+axes[1].set_xlabel("Incomes")
+axes[1].set_ylabel("Product Name")
+fig.tight_layout()
+
+
+## Q3: Ventas e ingresos por mes en 2019
+
+data_to_explore.head(5)
+
+# Filtrar el año 2019
+dataq3filter = data_to_explore["year"] == 2019
+dataq3 = data_to_explore[dataq3filter] #filtra el año 2019
+
+#Ingreso de meses
+dataq3_month_in = dataq3.groupby(["MonthName"], #filtrando los meses del 2o19 
+                                 as_index=False).sum().sort_values("prod_unit_price", ascending=0)
+
+#Ventas por mes
+dataq3_month_sales = dataq3.groupby(["MonthName"], 
+                                    as_index=False).count().sort_values("prod_unit_price", ascending=0)
+
+
+plt.style.use('dark_background')
+fig, axes = plt.subplots(1, 2, figsize=(20,5))
+#Ingreso por mes
+axes[0].plot(dataq3_month_in["MonthName"], dataq3_month_in["prod_unit_price"],  #.plot hace este tipo grafio de linea
+             marker="v") #Marca el triengulo
+axes[0].set_title("Incomes per month")
+axes[0].set_xlabel("Month")
+axes[0].set_ylabel("Incomes")
+
+
+#Ventas por mes
+axes[1].plot(dataq3_month_sales["MonthName"], dataq3_month_sales["prod_unit_price"],  #.plot hace este tipo grafio de linea
+             marker="o") ##Marca el circulo
+axes[1].set_title("Sales per month")
+axes[1].set_xlabel("Month")
+axes[1].set_ylabel("Sales")
+
+## Q4:  Las mejores marcas con los mayores ingresos y ventas
+
+#Contar ventas
+dataq4_count = data_to_explore.groupby(["prod_brand"], 
+                                       as_index=False).count().sort_values("category", ascending=0)[:10]
+
+#Sumar precios de productos
+dataq4_sum = data_to_explore.groupby(["prod_brand"], 
+                                     as_index=False).sum().sort_values("prod_unit_price", ascending=0)[:10]
+
+
+plt.style.use('dark_background')
+fig, axes = plt.subplots(1, 2, figsize=(20,5))
+#Ingresos de marca
+
+axes[0].set_title("Top Incomes by Brand")
+axes[0].set_xlabel("Incomes")
+axes[0].set_ylabel("Brands")
+
+axes[0].barh(dataq4_sum["prod_brand"], dataq4_sum["prod_unit_price"],  #tipo de grafico de barras con .barh
+            color=colors) #grafico de barras horizontal agrenadio h
+
+#Ingresos de ventas
+
+axes[1].set_title("Top Sales by Brand")
+axes[1].set_xlabel("Brands")
+axes[1].set_ylabel("Sales")
+axes[1].set_xticks(np.arange(10))
+axes[1].set_xticklabels(dataq4_count["prod_brand"], rotation = 45) 
+axes[1].bar(dataq4_count["prod_brand"], dataq4_count["prod_unit_price"], #grafico de barras normal
+            color=colors)
+
+fig.tight_layout()
